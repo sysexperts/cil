@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ciloglu
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-CHANGE_ME}
+      POSTGRES_DB: ciloglu_rechnungen
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ciloglu"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://ciloglu:${POSTGRES_PASSWORD:-CHANGE_ME}@db:5432/ciloglu_rechnungen?schema=public"
+      SESSION_SECRET: ${SESSION_SECRET:-CHANGE_ME}
+      STORAGE_DIR: "/app/storage"
+      APP_URL: ${APP_URL:-https://ciloglu.vapur-it.de}
+    volumes:
+      - storage_data:/app/storage
+    ports:
+      - "3000:3000"
+
+volumes:
+  db_data:
+  storage_data:

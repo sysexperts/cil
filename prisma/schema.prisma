@@ -1,0 +1,151 @@
+// Ciloglu Rechnungseingangsprüfer — Datenmodell
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- Benutzer (einfaches Team-Login) ---
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwortHash String
+  name         String?
+  createdAt    DateTime @default(now())
+  auditLogs    AuditLog[]
+}
+
+// --- Lieferant ---
+model Lieferant {
+  id         String       @id @default(cuid())
+  name       String
+  ustIdNr    String?
+  aktiv      Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+  sonderpreise Sonderpreis[]
+  rechnungen Rechnung[]
+}
+
+// --- Stammartikel / Produkt ---
+model Produkt {
+  id             String   @id @default(cuid())
+  artikelnummer  String   @unique
+  ean            String?
+  name           String
+  kategorie      String?
+  marke          String?
+  einheit        String   @default("Stk")   // Stk, kg, Karton, ...
+  gebindeGroesse String?                     // z.B. "12x500g"
+  gewichtKg      Decimal? @db.Decimal(10, 3) // Nettogewicht pro Einheit
+  sollPreisNetto Decimal  @db.Decimal(12, 4)
+  waehrung       String   @default("EUR")
+  mwstSatz       Decimal  @default(7) @db.Decimal(5, 2) // Lebensmittel oft 7%
+  preisToleranz  Decimal  @default(0) @db.Decimal(5, 2) // erlaubte % Abweichung
+  aktiv          Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  sonderpreise   Sonderpreis[]
+  positionen     Rechnungsposition[]
+
+  @@index([name])
+  @@index([kategorie])
+}
+
+// --- Sonderpreis (Preis-Hierarchie) ---
+model Sonderpreis {
+  id          String    @id @default(cuid())
+  produkt     Produkt   @relation(fields: [produktId], references: [id], onDelete: Cascade)
+  produktId   String
+  lieferant   Lieferant? @relation(fields: [lieferantId], references: [id])
+  lieferantId String?
+  preisNetto  Decimal   @db.Decimal(12, 4)
+  gueltigVon  DateTime?
+  gueltigBis  DateTime?
+
+  @@index([produktId])
+}
+
+// --- Rechnung (Kopf) ---
+enum RechnungQuelle {
+  PDF
+  OCR
+  ZUGFERD
+  XRECHNUNG
+  MAIL
+  MANUELL
+}
+
+enum RechnungStatus {
+  EINGEGANGEN
+  GEPRUEFT
+  FREIGEGEBEN
+  ABGELEHNT
+}
+
+enum AmpelStatus {
+  GRUEN
+  GELB
+  ROT
+}
+
+model Rechnung {
+  id           String         @id @default(cuid())
+  nummer       String?
+  datum        DateTime?
+  lieferant    Lieferant?     @relation(fields: [lieferantId], references: [id])
+  lieferantId  String?
+  nettoSumme   Decimal?       @db.Decimal(12, 2)
+  mwstSumme    Decimal?       @db.Decimal(12, 2)
+  bruttoSumme  Decimal?       @db.Decimal(12, 2)
+  quelle       RechnungQuelle @default(PDF)
+  status       RechnungStatus @default(EINGEGANGEN)
+  ampel        AmpelStatus?
+  originalDatei String?       // Pfad in STORAGE_DIR
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  positionen   Rechnungsposition[]
+  auditLogs    AuditLog[]
+
+  @@index([status])
+}
+
+// --- Rechnungsposition ---
+model Rechnungsposition {
+  id             String   @id @default(cuid())
+  rechnung       Rechnung @relation(fields: [rechnungId], references: [id], onDelete: Cascade)
+  rechnungId     String
+  position       Int?
+  artikelnummer  String?
+  bezeichnung    String?
+  menge          Decimal? @db.Decimal(12, 3)
+  einheit        String?
+  einzelpreis    Decimal? @db.Decimal(12, 4)
+  positionsbetrag Decimal? @db.Decimal(12, 2)
+  gewichtKg      Decimal? @db.Decimal(10, 3)
+
+  matchedProdukt Produkt? @relation(fields: [matchedProduktId], references: [id])
+  matchedProduktId String?
+  ampel          AmpelStatus?
+  abweichungen   Json?    // Liste erkannter Abweichungen
+
+  @@index([rechnungId])
+}
+
+// --- Audit-Trail (GoBD) ---
+model AuditLog {
+  id         String   @id @default(cuid())
+  user       User?    @relation(fields: [userId], references: [id])
+  userId     String?
+  rechnung   Rechnung? @relation(fields: [rechnungId], references: [id])
+  rechnungId String?
+  aktion     String
+  details    Json?
+  createdAt  DateTime @default(now())
+
+  @@index([rechnungId])
+}

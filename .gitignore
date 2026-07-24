@@ -1,0 +1,32 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+
+# production
+/build
+
+# env / secrets
+.env
+.env*.local
+!.env.example
+
+# uploads (Rechnungen liegen außerhalb des Repos)
+/storage/
+/uploads/
+
+# misc
+.DS_Store
+*.pem
+npm-debug.log*
+/coverage
+/prisma/dev.db
+*.tsbuildinfo
+
+# Recherche-Temp
+home.html
