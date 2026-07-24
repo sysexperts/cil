@@ -23,7 +23,13 @@ export default async function RechnungenSeite() {
 
   return (
     <div>
-      <div className="topbar"><h1>Rechnungen</h1></div>
+      <div className="topbar">
+        <h1>Rechnungen</h1>
+        {rechnungen.length > 0 && (
+          // eslint-disable-next-line @next/next/no-html-link-for-pages
+          <a className="btn btn-sm" href="/rechnungen/export">⬇ CSV-Export</a>
+        )}
+      </div>
       <UploadFormular />
 
       <div className="card" style={{ overflowX: "auto" }}>
