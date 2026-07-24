@@ -1,0 +1,31 @@
+# Produktions-Overrides für den Server (mit docker-compose.yml kombinieren).
+# App nur an localhost (Nginx proxyt davor), DB nicht öffentlich exponiert.
+services:
+  db:
+    ports: !reset []          # kein Host-Port für PostgreSQL
+    environment:
+      POSTGRES_USER: ciloglu
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ciloglu_rechnungen
+
+  app:
+    ports:
+      - "127.0.0.1:3200:3000"  # nur lokal erreichbar, Nginx-Reverse-Proxy davor
+    environment:
+      DATABASE_URL: "postgresql://ciloglu:${POSTGRES_PASSWORD}@db:5432/ciloglu_rechnungen?schema=public"
+      SESSION_SECRET: ${SESSION_SECRET}
+      APP_URL: "https://ciloglu.vapur-it.de"
+      NODE_ENV: "production"
+
+  # Einmal-Service: DB-Migration + Seed (volle Dependencies aus der Builder-Stage)
+  migrate:
+    build:
+      context: .
+      target: builder
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://ciloglu:${POSTGRES_PASSWORD}@db:5432/ciloglu_rechnungen?schema=public"
+    command: sh -c "npx prisma migrate deploy && npx tsx prisma/seed.ts"
+    restart: "no"
