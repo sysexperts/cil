@@ -9,7 +9,7 @@ services:
       POSTGRES_DB: ciloglu_rechnungen
 
   app:
-    ports:
+    ports: !override
       - "127.0.0.1:3200:3000"  # nur lokal erreichbar, Nginx-Reverse-Proxy davor
     environment:
       DATABASE_URL: "postgresql://ciloglu:${POSTGRES_PASSWORD}@db:5432/ciloglu_rechnungen?schema=public"
