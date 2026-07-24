@@ -44,9 +44,11 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm migrate
 - [x] Phase 0 — Projektbasis, Design-System, DB-Schema
 - [x] Phase 1 — Produktverwaltung (Liste, manuelle Pflege, CSV/Excel-Import)
 - [x] **Live-Deployment** auf ciloglu.vapur-it.de (Docker + Nginx + TLS)
-- [ ] Phase 2 — Rechnungs-Upload (PDF) + Positionsextraktion
-- [ ] Phase 3 — Prüf-Engine (Preis/Menge/Kilo/Formal)
-- [ ] Phase 4 — Freigabe-Workflow + Team-Login
-- [ ] Phase 5 — OCR, ZUGFeRD/XRechnung, E-Mail-Ingest
-- [ ] Phase 6 — Report/Export + Benachrichtigungen
-- [ ] Phase 7 — Security-Härtung, DSGVO/GoBD, Backups
+- [x] Phase 2 — Rechnungs-Upload (PDF) + Positionsextraktion (unpdf)
+- [x] Phase 3 — Prüf-Engine (Preis/Menge/Kilo/Formal, Ampel) + 30 Unit-Tests
+- [x] Phase 4 — Team-Login (JWT), Freigabe-Workflow, Audit-Trail, Konto-Verwaltung
+- [x] Phase 5 — ZUGFeRD/XRechnung (CII+UBL) · *offen: OCR, E-Mail-Ingest*
+- [x] Phase 6 — CSV-Export (Liste + Einzelrechnung) · *offen: PDF-Report, E-Mail-Benachrichtigung*
+- [x] Phase 7 — Backups (DB+Storage, Cron), Sicherheits-/Betriebsdoku · *offen: Virenscan, Rollen*
+
+Details & offene Punkte: [docs/PROJEKTPLAN.md](docs/PROJEKTPLAN.md) · [deploy/README-DEPLOY.md](deploy/README-DEPLOY.md)

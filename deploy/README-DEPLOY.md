@@ -11,7 +11,7 @@ Vom Entwicklungsrechner (Quellcode wird per tar/SSH übertragen, Repo ist privat
 
 ```bash
 # lokal im Projektordner
-ssh vapur-server 'find /opt/ciloglu -mindepth 1 -maxdepth 1 ! -name .env ! -name storage -exec rm -rf {} +'
+ssh vapur-server 'find /opt/ciloglu -mindepth 1 -maxdepth 1 ! -name .env ! -name storage ! -name backups -exec rm -rf {} +'
 tar --exclude=node_modules --exclude=.next --exclude=.git --exclude=storage -czf - . \
   | ssh vapur-server 'tar --no-same-owner -xzf - -C /opt/ciloglu'
 ssh vapur-server 'cd /opt/ciloglu && docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build app'
