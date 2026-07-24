@@ -3,9 +3,9 @@ const nextConfig = {
   reactStrictMode: true,
   output: "standalone",
   images: {
-    remotePatterns: [
-      { protocol: "https", hostname: "ciloglu.de" },
-    ],
+    // Nur ein kleines statisches Logo -> keine Runtime-Optimierung nötig
+    // (vermeidet Cache-Schreibfehler im Standalone-Container).
+    unoptimized: true,
   },
 };
 

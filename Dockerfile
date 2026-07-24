@@ -21,7 +21,7 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-RUN mkdir -p /app/storage && chown -R nextjs:nodejs /app/storage
+RUN mkdir -p /app/storage /app/.next/cache && chown -R nextjs:nodejs /app/storage /app/.next
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000 HOSTNAME=0.0.0.0
