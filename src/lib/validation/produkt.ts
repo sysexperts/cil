@@ -1,12 +1,14 @@
 import { z } from "zod";
+import { parseBetrag } from "@/lib/parsing/number";
 
-// Akzeptiert deutsche ("1.234,56") und englische Zahlformate.
+// Akzeptiert deutsche ("1.234,56") und englische ("1,234.56" / "28.5") Zahlformate.
 export const zahl = z
   .union([z.string(), z.number()])
   .transform((v) => {
     if (typeof v === "number") return v;
-    const s = v.trim().replace(/\./g, "").replace(",", ".");
-    return s === "" ? NaN : Number(s);
+    if (v.trim() === "") return NaN;
+    const n = parseBetrag(v);
+    return n == null ? NaN : n;
   });
 
 export const produktSchema = z.object({
