@@ -55,6 +55,8 @@ function betragNach(text: string, patterns: RegExp[]): number | null {
   return s ? parseBetrag(s) : null;
 }
 
+const GELD_TOKEN = /^-?\d{1,3}(?:[.\s]\d{3})*,\d{2}$|^-?\d+\.\d{2}$/;
+
 // Positions-Heuristik: Zeilen mit einem Artikel-Token und >=2 Geldbeträgen.
 function parsePositionen(text: string): ParsedPosition[] {
   const zeilen = text.split(/\r?\n/).map((z) => z.trim()).filter(Boolean);
@@ -66,37 +68,46 @@ function parsePositionen(text: string): ParsedPosition[] {
     if (/(gesamt|summe|zwischensumme|mwst|ust|netto|brutto|betrag|seite|rechnung|datum|lieferung)/i.test(zeile)) {
       continue;
     }
-    const gelder = zeile.match(GELD);
-    if (!gelder || gelder.length < 2) continue;
+    const tokens = zeile.split(/\s+/);
+    const geldIdx = tokens.map((t, i) => (GELD_TOKEN.test(t) ? i : -1)).filter((i) => i >= 0);
+    if (geldIdx.length < 2) continue;
 
-    const betrag = parseBetrag(gelder[gelder.length - 1]);
-    const einzelpreis = parseBetrag(gelder[gelder.length - 2]);
+    const epIdx = geldIdx[geldIdx.length - 2];
+    const betragIdx = geldIdx[geldIdx.length - 1];
+    const einzelpreis = parseBetrag(tokens[epIdx]);
+    const betrag = parseBetrag(tokens[betragIdx]);
     if (betrag == null || einzelpreis == null) continue;
 
-    // Artikelnummer: erstes Token mit Ziffern (mind. 3 Zeichen)
-    const tokens = zeile.split(/\s+/);
-    const artNr = tokens.find((t) => /^[A-Za-z0-9\-]{3,}$/.test(t) && /\d/.test(t)) ?? null;
+    // Artikelnummer: erstes Nicht-Geld-Token mit Ziffern (mind. 3 Zeichen)
+    const artIdx = tokens.findIndex(
+      (t, i) => !geldIdx.includes(i) && /^[A-Za-z0-9\-]{3,}$/.test(t) && /\d/.test(t),
+    );
+    const artNr = artIdx >= 0 ? tokens[artIdx] : null;
 
-    // Menge: kleine Zahl vor dem Einzelpreis (ganzzahlig oder 1 Nachkommastelle)
-    const mengeMatch = zeile.match(/(?:^|\s)(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:stk|stück|kg|kart(?:on)?|pack|x)?\s/i);
-    let menge: number | null = mengeMatch ? parseBetrag(mengeMatch[1]) : null;
-
-    // Falls Menge nicht plausibel: aus betrag/einzelpreis ableiten
+    // Menge: rechte Zahl vor dem Einzelpreis, nach der Artikelnummer
+    let menge: number | null = null;
+    for (let i = epIdx - 1; i > artIdx; i--) {
+      if (/^\d{1,4}(?:[.,]\d{1,3})?$/.test(tokens[i])) {
+        menge = parseBetrag(tokens[i]);
+        break;
+      }
+    }
+    // Fallback: aus Betrag/Einzelpreis ableiten
     if ((menge == null || menge === 0) && einzelpreis) {
       const abgeleitet = betrag / einzelpreis;
       if (Math.abs(abgeleitet - Math.round(abgeleitet)) < 0.02) menge = Math.round(abgeleitet);
     }
 
-    // Einheit
-    const einheitMatch = zeile.match(/\b(stk|stück|kg|karton|kart|pack|palette|dose|glas|flasche)\b/i);
+    // Einheit: Wort-Token zwischen Menge und Einzelpreis
+    const einheitMatch = zeile.match(/\b(stk|stück|st|kg|karton|kart|pack|palette|dose|glas|flasche|beutel|sack)\b/i);
 
-    // Bezeichnung: Zeile ohne Zahlen/Artikelnr grob
-    const bezeichnung = zeile
-      .replace(new RegExp(GELD.source, "g"), "")
-      .replace(artNr ?? "", "")
-      .replace(/\s{2,}/g, " ")
-      .trim()
-      .slice(0, 120) || null;
+    const bezeichnung =
+      tokens
+        .filter((t, i) => i !== artIdx && !geldIdx.includes(i) && !/^\d{1,4}([.,]\d{1,3})?$/.test(t))
+        .join(" ")
+        .replace(/\s{2,}/g, " ")
+        .trim()
+        .slice(0, 120) || null;
 
     posZaehler++;
     out.push({

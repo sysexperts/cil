@@ -56,4 +56,10 @@ describe("parseRechnungstext", () => {
     expect(p1.einzelpreis).toBe(28.5);
     expect(p1.positionsbetrag).toBe(57.0);
   });
+
+  it("erkennt die Menge korrekt (nicht die führende Positionsnummer)", () => {
+    // Zeile: '1  10001  ...  2 Kart  28,50  57,00' -> Menge 2, nicht 1
+    expect(inv.positionen[0].menge).toBe(2);
+    expect(inv.positionen[1].menge).toBe(1);
+  });
 });

@@ -81,6 +81,15 @@ function round2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }
 
+function einheitGleich(a: string, b: string): boolean {
+  const na = a.trim().toLowerCase().replace(/\.$/, "");
+  const nb = b.trim().toLowerCase().replace(/\.$/, "");
+  if (na === nb) return true;
+  const kurz = na.length <= nb.length ? na : nb;
+  const lang = na.length <= nb.length ? nb : na;
+  return kurz.length >= 2 && lang.startsWith(kurz);
+}
+
 /** Findet den passenden Stammartikel per Artikelnummer, sonst EAN. */
 export function findeStammartikel(
   pos: ParsedPosition,
@@ -172,8 +181,8 @@ export function prüfePosition(
     }
   }
 
-  // 4. Einheit
-  if (artikel.einheit && pos.einheit && artikel.einheit.trim().toLowerCase() !== pos.einheit.trim().toLowerCase()) {
+  // 4. Einheit (tolerant: Abkürzungen wie "Kart" ↔ "Karton" gelten als gleich)
+  if (artikel.einheit && pos.einheit && !einheitGleich(artikel.einheit, pos.einheit)) {
     abw.push({
       feld: "einheit",
       schwere: "info",
