@@ -1,0 +1,132 @@
+import { prisma } from "@/lib/db";
+import { speichereDatei } from "@/lib/storage";
+import { extrahiereText } from "@/lib/parsing/pdf";
+import { parseRechnungstext } from "@/lib/parsing/invoice";
+import { ladeStammartikel } from "./stammdaten";
+import { prüfeRechnung, type ParsedInvoice } from "@/lib/validation/engine";
+
+export type Quelle = "PDF" | "OCR" | "ZUGFERD" | "XRECHNUNG" | "MAIL" | "MANUELL";
+
+/** Nimmt eine hochgeladene Rechnungsdatei, extrahiert, prüft und speichert sie. */
+export async function verarbeiteUpload(opts: {
+  buffer: Buffer;
+  dateiname: string;
+  quelle?: Quelle;
+  userId?: string;
+}): Promise<{ id: string }> {
+  const { buffer, dateiname, userId } = opts;
+  const quelle = opts.quelle ?? "PDF";
+
+  const relPfad = await speichereDatei(buffer, dateiname);
+
+  let parsed: ParsedInvoice = { positionen: [] };
+  try {
+    const text = await extrahiereText(buffer);
+    parsed = parseRechnungstext(text);
+  } catch {
+    // Extraktion fehlgeschlagen -> leere Rechnung, manuell nachpflegbar
+  }
+
+  return persistiere(parsed, quelle, relPfad, userId);
+}
+
+/** Speichert eine geparste Rechnung inkl. Prüfergebnis (auch manuell nutzbar). */
+export async function persistiere(
+  parsed: ParsedInvoice,
+  quelle: Quelle,
+  originalDatei: string | null,
+  userId?: string,
+): Promise<{ id: string }> {
+  const stamm = await ladeStammartikel();
+  const ergebnis = prüfeRechnung(parsed, stamm);
+
+  const rechnung = await prisma.rechnung.create({
+    data: {
+      nummer: parsed.nummer ?? null,
+      datum: parsed.datum ? new Date(parsed.datum) : null,
+      nettoSumme: parsed.nettoSumme ?? null,
+      mwstSumme: parsed.mwstSumme ?? null,
+      bruttoSumme: parsed.bruttoSumme ?? null,
+      quelle,
+      status: "EINGEGANGEN",
+      ampel: ergebnis.ampel,
+      originalDatei,
+      positionen: {
+        create: parsed.positionen.map((p, i) => {
+          const pr = ergebnis.positionen[i];
+          return {
+            position: p.position ?? i + 1,
+            artikelnummer: p.artikelnummer ?? null,
+            bezeichnung: p.bezeichnung ?? null,
+            menge: p.menge ?? null,
+            einheit: p.einheit ?? null,
+            einzelpreis: p.einzelpreis ?? null,
+            positionsbetrag: p.positionsbetrag ?? null,
+            gewichtKg: p.gewichtKg ?? null,
+            matchedProduktId: pr?.matchedProduktId ?? null,
+            ampel: pr?.ampel ?? null,
+            abweichungen: pr ? (pr.abweichungen as object) : undefined,
+          };
+        }),
+      },
+    },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      userId: userId ?? null,
+      rechnungId: rechnung.id,
+      aktion: "RECHNUNG_EINGEGANGEN",
+      details: {
+        quelle,
+        ampel: ergebnis.ampel,
+        kopfAbweichungen: ergebnis.kopfAbweichungen as object,
+        positionen: parsed.positionen.length,
+      },
+    },
+  });
+
+  return { id: rechnung.id };
+}
+
+/** Prüft eine bereits gespeicherte Rechnung erneut (nach Stammdaten-/Positionsänderung). */
+export async function prüfeErneut(rechnungId: string, userId?: string): Promise<void> {
+  const r = await prisma.rechnung.findUnique({ where: { id: rechnungId }, include: { positionen: true } });
+  if (!r) return;
+  const stamm = await ladeStammartikel();
+  const parsed: ParsedInvoice = {
+    nummer: r.nummer,
+    datum: r.datum,
+    nettoSumme: r.nettoSumme ? Number(r.nettoSumme) : null,
+    mwstSumme: r.mwstSumme ? Number(r.mwstSumme) : null,
+    bruttoSumme: r.bruttoSumme ? Number(r.bruttoSumme) : null,
+    positionen: r.positionen.map((p) => ({
+      position: p.position,
+      artikelnummer: p.artikelnummer,
+      bezeichnung: p.bezeichnung,
+      menge: p.menge ? Number(p.menge) : null,
+      einheit: p.einheit,
+      einzelpreis: p.einzelpreis ? Number(p.einzelpreis) : null,
+      positionsbetrag: p.positionsbetrag ? Number(p.positionsbetrag) : null,
+      gewichtKg: p.gewichtKg ? Number(p.gewichtKg) : null,
+    })),
+  };
+  const ergebnis = prüfeRechnung(parsed, stamm);
+
+  await prisma.$transaction([
+    prisma.rechnung.update({ where: { id: r.id }, data: { ampel: ergebnis.ampel } }),
+    ...r.positionen.map((p, i) =>
+      prisma.rechnungsposition.update({
+        where: { id: p.id },
+        data: {
+          matchedProduktId: ergebnis.positionen[i]?.matchedProduktId ?? null,
+          ampel: ergebnis.positionen[i]?.ampel ?? null,
+          abweichungen: ergebnis.positionen[i] ? (ergebnis.positionen[i].abweichungen as object) : undefined,
+        },
+      }),
+    ),
+    prisma.auditLog.create({
+      data: { userId: userId ?? null, rechnungId: r.id, aktion: "RECHNUNG_NEU_GEPRUEFT", details: { ampel: ergebnis.ampel } },
+    }),
+  ]);
+}

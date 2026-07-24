@@ -1,36 +1,10 @@
-import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
+import { SESSION_COOKIE, MAX_AGE, verifySessionToken, type SessionPayload } from "@/lib/session";
 
-export const SESSION_COOKIE = "ciloglu_session";
-const MAX_AGE = 60 * 60 * 8; // 8 Stunden
-
-function secret(): Uint8Array {
-  const s = process.env.SESSION_SECRET;
-  if (!s) throw new Error("SESSION_SECRET fehlt");
-  return new TextEncoder().encode(s);
-}
-
-export type SessionPayload = { sub: string; email: string; name?: string };
-
-export async function createSessionToken(p: SessionPayload): Promise<string> {
-  return new SignJWT({ email: p.email, name: p.name })
-    .setProtectedHeader({ alg: "HS256" })
-    .setSubject(p.sub)
-    .setIssuedAt()
-    .setExpirationTime(`${MAX_AGE}s`)
-    .sign(secret());
-}
-
-export async function verifySessionToken(token: string): Promise<SessionPayload | null> {
-  try {
-    const { payload } = await jwtVerify(token, secret());
-    return { sub: String(payload.sub), email: String(payload.email), name: payload.name as string | undefined };
-  } catch {
-    return null;
-  }
-}
+export { SESSION_COOKIE, createSessionToken, verifySessionToken } from "@/lib/session";
+export type { SessionPayload } from "@/lib/session";
 
 /** In Server Components / Actions: aktuellen Benutzer aus dem Cookie lesen. */
 export async function getSessionUser(): Promise<SessionPayload | null> {
