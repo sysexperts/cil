@@ -11,10 +11,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const buf = await leseDatei(r.originalDatei);
     const array = new Uint8Array(buf);
+    const istXml = r.originalDatei.toLowerCase().endsWith(".xml");
     return new NextResponse(array, {
       headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename="rechnung-${r.nummer ?? id}.pdf"`,
+        "Content-Type": istXml ? "application/xml" : "application/pdf",
+        "Content-Disposition": `inline; filename="rechnung-${r.nummer ?? id}.${istXml ? "xml" : "pdf"}"`,
       },
     });
   } catch {

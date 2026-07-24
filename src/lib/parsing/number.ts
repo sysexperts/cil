@@ -22,18 +22,18 @@ export function parseBetrag(raw: string): number | null {
 }
 
 export function parseDatum(raw: string): Date | null {
+  // ISO zuerst (YYYY-MM-DD), sonst matcht das TMJ-Muster es falsch.
+  const iso = raw.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) {
+    const date = new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+    return isNaN(date.getTime()) ? null : date;
+  }
   const m = raw.match(/(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{2,4})/);
   if (m) {
-    let [, d, mo, y] = m;
+    const [, d, mo, y] = m;
     let year = Number(y);
     if (year < 100) year += 2000;
     const date = new Date(year, Number(mo) - 1, Number(d));
-    return isNaN(date.getTime()) ? null : date;
-  }
-  // ISO
-  const iso = raw.match(/(\d{4})-(\d{2})-(\d{2})/);
-  if (iso) {
-    const date = new Date(`${iso[1]}-${iso[2]}-${iso[3]}`);
     return isNaN(date.getTime()) ? null : date;
   }
   return null;

@@ -9,12 +9,13 @@ export default function UploadFormular() {
     <div className="card card-pad" style={{ marginBottom: 20 }}>
       <h3>Rechnung hochladen</h3>
       <p className="muted" style={{ fontSize: 13, marginTop: -6 }}>
-        PDF-Rechnung auswählen. Sie wird automatisch ausgelesen und gegen die Produkt-Stammdaten geprüft.
+        PDF- oder E-Rechnung (ZUGFeRD/XRechnung, XML) auswählen. Sie wird automatisch ausgelesen
+        und gegen die Produkt-Stammdaten geprüft.
       </p>
       {state.error && <div className="flash err">{state.error}</div>}
       <form action={action}>
         <div className="field">
-          <input type="file" name="datei" accept="application/pdf,.pdf" required />
+          <input type="file" name="datei" accept="application/pdf,.pdf,.xml,text/xml,application/xml" required />
         </div>
         <button className="btn btn-primary" type="submit" disabled={pending}>
           {pending ? "Verarbeite…" : "Hochladen & prüfen"}

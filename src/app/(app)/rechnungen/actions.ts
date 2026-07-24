@@ -19,16 +19,17 @@ export async function rechnungUpload(_prev: unknown, formData: FormData) {
   if (file.size > MAX_MB * 1024 * 1024) {
     return { ok: false, error: `Datei zu groß (max. ${MAX_MB} MB).` };
   }
-  const typ = file.type || "";
-  const istPdf = ERLAUBT.has(typ) || file.name.toLowerCase().endsWith(".pdf");
-  if (!istPdf) {
-    return { ok: false, error: "Aktuell werden nur PDF-Rechnungen unterstützt." };
+  const name = file.name.toLowerCase();
+  const istPdf = ERLAUBT.has(file.type || "") || name.endsWith(".pdf");
+  const istXml = name.endsWith(".xml");
+  if (!istPdf && !istXml) {
+    return { ok: false, error: "Unterstützt werden PDF- und XML-Rechnungen (ZUGFeRD/XRechnung)." };
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
   let id: string;
   try {
-    const res = await verarbeiteUpload({ buffer, dateiname: file.name, quelle: "PDF", userId: user?.sub });
+    const res = await verarbeiteUpload({ buffer, dateiname: file.name, userId: user?.sub });
     id = res.id;
   } catch {
     return { ok: false, error: "Verarbeitung fehlgeschlagen." };

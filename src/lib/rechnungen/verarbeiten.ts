@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/db";
 import { speichereDatei } from "@/lib/storage";
-import { extrahiereText } from "@/lib/parsing/pdf";
+import { extrahiereText, extrahiereZugferdXml } from "@/lib/parsing/pdf";
 import { parseRechnungstext } from "@/lib/parsing/invoice";
+import { parseERechnungXml, istERechnungXml } from "@/lib/parsing/xml";
 import { ladeStammartikel } from "./stammdaten";
 import { prüfeRechnung, type ParsedInvoice } from "@/lib/validation/engine";
 
@@ -15,14 +16,34 @@ export async function verarbeiteUpload(opts: {
   userId?: string;
 }): Promise<{ id: string }> {
   const { buffer, dateiname, userId } = opts;
-  const quelle = opts.quelle ?? "PDF";
+  const istXml = dateiname.toLowerCase().endsWith(".xml");
 
   const relPfad = await speichereDatei(buffer, dateiname);
 
   let parsed: ParsedInvoice = { positionen: [] };
+  let quelle: Quelle = opts.quelle ?? "PDF";
+
   try {
-    const text = await extrahiereText(buffer);
-    parsed = parseRechnungstext(text);
+    if (istXml) {
+      // Reine E-Rechnung (XRechnung/CII)
+      const xml = buffer.toString("utf-8");
+      const e = parseERechnungXml(xml);
+      if (e) {
+        parsed = e;
+        quelle = istERechnungXml(xml) === "UBL" ? "XRECHNUNG" : "ZUGFERD";
+      }
+    } else {
+      // PDF: zuerst eingebettetes ZUGFeRD-XML (zuverlässiger), sonst Textheuristik
+      const xml = await extrahiereZugferdXml(buffer);
+      const e = xml ? parseERechnungXml(xml) : null;
+      if (e) {
+        parsed = e;
+        quelle = "ZUGFERD";
+      } else {
+        parsed = parseRechnungstext(await extrahiereText(buffer));
+        quelle = "PDF";
+      }
+    }
   } catch {
     // Extraktion fehlgeschlagen -> leere Rechnung, manuell nachpflegbar
   }
