@@ -30,9 +30,20 @@ docker compose exec app npx prisma migrate deploy
 
 Nginx als Reverse-Proxy auf Port 3000, TLS für `ciloglu.vapur-it.de`.
 
+## Deployment-Status
+**Live:** https://ciloglu.vapur-it.de (Server `/opt/ciloglu`, App-Container `127.0.0.1:3200`,
+Nginx-Reverse-Proxy + Let's-Encrypt-TLS). Update auf dem Server:
+
+```bash
+cd /opt/ciloglu
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build app
+docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm migrate  # bei Schemaänderung
+```
+
 ## Status
 - [x] Phase 0 — Projektbasis, Design-System, DB-Schema
 - [x] Phase 1 — Produktverwaltung (Liste, manuelle Pflege, CSV/Excel-Import)
+- [x] **Live-Deployment** auf ciloglu.vapur-it.de (Docker + Nginx + TLS)
 - [ ] Phase 2 — Rechnungs-Upload (PDF) + Positionsextraktion
 - [ ] Phase 3 — Prüf-Engine (Preis/Menge/Kilo/Formal)
 - [ ] Phase 4 — Freigabe-Workflow + Team-Login
