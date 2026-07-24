@@ -17,7 +17,11 @@ export default async function LoginSeite({
         </div>
         <h2>Rechnungsprüfer</h2>
         <p className="muted" style={{ marginTop: -6 }}>Bitte anmelden</p>
-        {sp.error && <div className="flash err">Anmeldung fehlgeschlagen.</div>}
+        {sp.error === "ratelimit" ? (
+          <div className="flash err">Zu viele Versuche. Bitte in einigen Minuten erneut versuchen.</div>
+        ) : sp.error ? (
+          <div className="flash err">Anmeldung fehlgeschlagen.</div>
+        ) : null}
         <form action={login}>
           <input type="hidden" name="next" value={sp.next ?? "/"} />
           <div className="field">
