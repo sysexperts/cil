@@ -136,6 +136,20 @@ model Rechnungsposition {
   @@index([rechnungId])
 }
 
+// --- Mail-/Benachrichtigungs-Konfiguration (Singleton, id="default") ---
+model MailEinstellung {
+  id          String   @id @default("default")
+  aktiv       Boolean  @default(false)
+  smtpHost    String?
+  smtpPort    Int      @default(587)
+  smtpUser    String?
+  smtpPasswort String?
+  absender    String?
+  empfaenger  String?   // mehrere durch Komma getrennt
+  nurBeiRot   Boolean  @default(true) // nur bei Fehlern (rot) benachrichtigen
+  updatedAt   DateTime @updatedAt
+}
+
 // --- Audit-Trail (GoBD) ---
 model AuditLog {
   id         String   @id @default(cuid())

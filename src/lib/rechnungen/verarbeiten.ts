@@ -5,7 +5,7 @@ import { parseRechnungstext } from "@/lib/parsing/invoice";
 import { parseERechnungXml, istERechnungXml } from "@/lib/parsing/xml";
 import { ladeStammartikel } from "./stammdaten";
 import { prüfeRechnung, type ParsedInvoice } from "@/lib/validation/engine";
-import { sendeBenachrichtigung, benachrichtigungAktiv } from "@/lib/notify";
+import { sendeBenachrichtigung, ladeMailKonfig } from "@/lib/notify";
 
 export type Quelle = "PDF" | "OCR" | "ZUGFERD" | "XRECHNUNG" | "MAIL" | "MANUELL";
 
@@ -108,16 +108,19 @@ export async function persistiere(
     },
   });
 
-  // Benachrichtigung bei Abweichungen (nur wenn SMTP konfiguriert)
-  if (ergebnis.ampel === "ROT" && benachrichtigungAktiv()) {
-    const url = `${process.env.APP_URL ?? ""}/rechnungen/${rechnung.id}`;
-    const fehler = ergebnis.positionen
-      .flatMap((p) => p.abweichungen.filter((a) => a.schwere === "error").map((a) => `Pos ${p.index + 1}: ${a.nachricht}`))
-      .concat(ergebnis.kopfAbweichungen.filter((a) => a.schwere === "error").map((a) => a.nachricht));
-    await sendeBenachrichtigung(
-      `Rechnungsprüfung: Fehler in Rechnung ${parsed.nummer ?? "(ohne Nr.)"}`,
-      `Bei der automatischen Prüfung wurden Fehler festgestellt:\n\n${fehler.join("\n") || "Siehe Detailansicht."}\n\n${url}`,
-    );
+  // Benachrichtigung bei Abweichungen (nur wenn konfiguriert)
+  if (ergebnis.ampel !== "GRUEN") {
+    const k = await ladeMailKonfig();
+    if (k && (!k.nurBeiRot || ergebnis.ampel === "ROT")) {
+      const url = `${process.env.APP_URL ?? ""}/rechnungen/${rechnung.id}`;
+      const fehler = ergebnis.positionen
+        .flatMap((p) => p.abweichungen.filter((a) => a.schwere === "error" || a.schwere === "warn").map((a) => `Pos ${p.index + 1}: ${a.nachricht}`))
+        .concat(ergebnis.kopfAbweichungen.filter((a) => a.schwere !== "info").map((a) => a.nachricht));
+      await sendeBenachrichtigung(
+        `Rechnungsprüfung: ${ergebnis.ampel === "ROT" ? "Fehler" : "Abweichung"} in Rechnung ${parsed.nummer ?? "(ohne Nr.)"}`,
+        `Bei der automatischen Prüfung wurde Folgendes festgestellt:\n\n${fehler.join("\n") || "Siehe Detailansicht."}\n\n${url}`,
+      );
+    }
   }
 
   return { id: rechnung.id };
