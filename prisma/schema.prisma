@@ -172,6 +172,13 @@ model MailEinstellung {
   absender    String?
   empfaenger  String?   // mehrere durch Komma getrennt
   nurBeiRot   Boolean  @default(true) // nur bei Fehlern (rot) benachrichtigen
+  // Automatischer E-Mail-Eingang (IMAP)
+  imapAktiv    Boolean @default(false)
+  imapHost     String?
+  imapPort     Int     @default(993)
+  imapUser     String?
+  imapPasswort String?
+  imapOrdner   String  @default("INBOX")
   updatedAt   DateTime @updatedAt
 }
 

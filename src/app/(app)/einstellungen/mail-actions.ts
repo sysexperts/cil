@@ -51,6 +51,38 @@ export async function mailKonfigSpeichern(_prev: unknown, formData: FormData) {
   return { ok: true, error: "" };
 }
 
+export async function imapKonfigSpeichern(_prev: unknown, formData: FormData) {
+  const user = await getSessionUser();
+  if (!user) return { ok: false, error: "Nicht angemeldet." };
+
+  const bestehend = await prisma.mailEinstellung.findUnique({ where: { id: "default" } });
+  const passwortEingabe = String(formData.get("imapPasswort") ?? "");
+  const aktiv = formData.get("imapAktiv") === "on";
+  const host = String(formData.get("imapHost") ?? "").trim();
+  const imapUser = String(formData.get("imapUser") ?? "").trim();
+
+  if (aktiv && (!host || !imapUser)) {
+    return { ok: false, error: "Für den aktiven E-Mail-Eingang sind IMAP-Server und Benutzer nötig." };
+  }
+
+  const daten = {
+    imapAktiv: aktiv,
+    imapHost: host || null,
+    imapPort: Number(formData.get("imapPort") ?? "993") || 993,
+    imapUser: imapUser || null,
+    imapPasswort: passwortEingabe ? passwortEingabe : (bestehend?.imapPasswort ?? null),
+    imapOrdner: String(formData.get("imapOrdner") ?? "INBOX").trim() || "INBOX",
+  };
+  await prisma.mailEinstellung.upsert({
+    where: { id: "default" },
+    update: daten,
+    create: { id: "default", empfaenger: null, ...daten },
+  });
+  await prisma.auditLog.create({ data: { userId: user.sub, aktion: "IMAP_KONFIG_GEAENDERT", details: { aktiv, host } } });
+  revalidatePath("/einstellungen");
+  return { ok: true, error: "" };
+}
+
 export async function testmailSenden(_prev: unknown, formData: FormData) {
   const user = await getSessionUser();
   if (!user) return { ok: false, error: "Nicht angemeldet." };

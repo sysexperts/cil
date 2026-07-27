@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { PasswortFormular, BenutzerFormular } from "./Formulare";
 import MailFormular from "./MailFormular";
+import ImapFormular from "./ImapFormular";
 import { getSessionUser, istAdmin } from "@/lib/auth";
 import { rolleAendern } from "./actions";
 
@@ -36,6 +37,18 @@ export default async function EinstellungenSeite() {
     <div>
       <div className="topbar"><h1>Einstellungen</h1></div>
       {admin && <MailFormular konfig={mailKonfig} />}
+      {admin && (
+        <ImapFormular
+          konfig={{
+            imapAktiv: mail?.imapAktiv ?? false,
+            imapHost: mail?.imapHost ?? "",
+            imapPort: mail?.imapPort ?? 993,
+            imapUser: mail?.imapUser ?? "",
+            imapOrdner: mail?.imapOrdner ?? "INBOX",
+            hatPasswort: Boolean(mail?.imapPasswort),
+          }}
+        />
+      )}
       <PasswortFormular />
       {admin && <BenutzerFormular />}
 
