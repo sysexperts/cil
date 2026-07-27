@@ -89,6 +89,9 @@ export async function persistiere(
       status: "EINGEGANGEN",
       ampel: ampelFinal,
       dublette,
+      faelligkeitAm: parsed.faelligkeitAm ?? null,
+      skontoProzent: parsed.skontoProzent ?? null,
+      skontoBisAm: parsed.skontoBisAm ?? null,
       originalDatei,
       positionen: {
         create: parsed.positionen.map((p, i) => {

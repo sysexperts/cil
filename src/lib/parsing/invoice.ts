@@ -37,6 +37,7 @@ export function parseRechnungstext(text: string): ParsedInvoice {
   const mwst = betragNach(text, [/(?:MwSt|USt|Umsatzsteuer|Mehrwertsteuer)\.?\s*(?:\d{1,2}[.,]?\d?\s*%)?\s*[:]?\s*€?\s*([\d.,]+)/i, /zzgl\.?\s*(?:MwSt|USt)[^\d]*([\d.,]+)/i]);
 
   const positionen = parsePositionen(text);
+  const { faelligkeitAm, skontoProzent, skontoBisAm } = parseZahlung(text, datum);
 
   return {
     nummer,
@@ -46,8 +47,47 @@ export function parseRechnungstext(text: string): ParsedInvoice {
     nettoSumme: netto,
     mwstSumme: mwst,
     bruttoSumme: brutto,
+    faelligkeitAm,
+    skontoProzent,
+    skontoBisAm,
     positionen,
   };
+}
+
+function addTage(d: Date | null, tage: number): Date | null {
+  if (!d) return null;
+  const r = new Date(d);
+  r.setDate(r.getDate() + tage);
+  return r;
+}
+
+// Zahlungsziel / Fälligkeit und Skonto aus dem Text lesen.
+function parseZahlung(text: string, datum: Date | null) {
+  let faelligkeitAm: Date | null = null;
+  // Explizites Fälligkeitsdatum
+  const fMatch = ersterTreffer(text, [
+    /(?:zahlbar\s+bis|f[äa]llig(?:keit)?(?:\s+am)?|zu\s+zahlen\s+bis|due\s+date)\D{0,12}(\d{1,2}[.\/-]\d{1,2}[.\/-]\d{2,4})/i,
+  ]);
+  if (fMatch) faelligkeitAm = parseDatum(fMatch);
+  // Zahlungsziel in Tagen -> ab Rechnungsdatum
+  if (!faelligkeitAm) {
+    const ziel = ersterTreffer(text, [/Zahlungsziel\D{0,6}(\d{1,3})\s*Tage/i, /innerhalb\s+von\s+(\d{1,3})\s*Tagen\s+(?:netto|ohne\s+Abzug)/i, /(\d{1,3})\s*Tage\s*netto/i]);
+    if (ziel) faelligkeitAm = addTage(datum, Number(ziel));
+  }
+
+  // Skonto: Prozentsatz + Frist
+  let skontoProzent: number | null = null;
+  let skontoBisAm: Date | null = null;
+  const sMatch = text.match(/(\d{1,2}(?:[.,]\d)?)\s*%\s*Skonto/i) || text.match(/Skonto\D{0,8}(\d{1,2}(?:[.,]\d)?)\s*%/i);
+  if (sMatch) {
+    skontoProzent = parseBetrag(sMatch[1]);
+    const fristTage = ersterTreffer(text, [/(?:innerhalb|binnen)\s+(?:von\s+)?(\d{1,2})\s*Tagen/i, /bei\s+Zahlung.{0,20}?(\d{1,2})\s*Tagen/i]);
+    const fristDatum = ersterTreffer(text, [/Skonto.{0,40}?bis\s+(\d{1,2}[.\/-]\d{1,2}[.\/-]\d{2,4})/i]);
+    if (fristDatum) skontoBisAm = parseDatum(fristDatum);
+    else if (fristTage) skontoBisAm = addTage(datum, Number(fristTage));
+  }
+
+  return { faelligkeitAm, skontoProzent, skontoBisAm };
 }
 
 function betragNach(text: string, patterns: RegExp[]): number | null {

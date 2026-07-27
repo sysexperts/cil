@@ -58,6 +58,37 @@ export default async function RechnungDetail({ params }: { params: Promise<{ id:
         </div>
       </div>
 
+      {(r.faelligkeitAm || r.skontoProzent) && (
+        <div className="card card-pad" style={{ marginBottom: 16 }}>
+          <h3 style={{ marginBottom: 10 }}>Zahlung</h3>
+          <div className="detail-grid">
+            {r.faelligkeitAm && (
+              <div>
+                <span className="muted">Fällig am</span>
+                <div>{new Date(r.faelligkeitAm).toLocaleDateString("de-DE")}
+                  {(() => {
+                    const tage = Math.ceil((new Date(r.faelligkeitAm!).getTime() - Date.now()) / 86400000);
+                    return <span className="muted"> ({tage < 0 ? `${-tage} Tage überfällig` : `in ${tage} Tagen`})</span>;
+                  })()}
+                </div>
+              </div>
+            )}
+            {r.skontoProzent && (
+              <div>
+                <span className="muted">Skonto</span>
+                <div>
+                  <strong>{Number(r.skontoProzent)} %</strong>
+                  {r.skontoBisAm && <> bis {new Date(r.skontoBisAm).toLocaleDateString("de-DE")}</>}
+                  {r.nettoSumme != null && (
+                    <span className="muted"> · spart {(Number(r.nettoSumme) * Number(r.skontoProzent) / 100).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Workflow-Aktionen */}
       <div className="toolbar">
         <div style={{ display: "flex", gap: 8 }}>

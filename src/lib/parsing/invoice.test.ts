@@ -63,3 +63,18 @@ describe("parseRechnungstext", () => {
     expect(inv.positionen[1].menge).toBe(1);
   });
 });
+
+describe("Zahlungsziel & Skonto", () => {
+  it("erkennt Fälligkeit und Skonto", () => {
+    const t = `Rechnung Nr: R-1\nRechnungsdatum: 15.03.2026\nZahlbar bis 14.04.2026.\n2% Skonto bei Zahlung innerhalb 10 Tagen.`;
+    const inv = parseRechnungstext(t);
+    expect((inv.faelligkeitAm as Date).getDate()).toBe(14);
+    expect(inv.skontoProzent).toBe(2);
+    expect((inv.skontoBisAm as Date).getDate()).toBe(25); // 15.03 + 10 Tage
+  });
+  it("berechnet Fälligkeit aus Zahlungsziel-Tagen", () => {
+    const t = `Rechnungsdatum: 01.03.2026\nZahlungsziel 30 Tage netto`;
+    const inv = parseRechnungstext(t);
+    expect((inv.faelligkeitAm as Date).getDate()).toBe(31);
+  });
+});

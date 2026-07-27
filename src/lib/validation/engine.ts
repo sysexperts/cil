@@ -32,6 +32,9 @@ export type ParsedInvoice = {
   nettoSumme?: number | null;
   mwstSumme?: number | null;
   bruttoSumme?: number | null;
+  faelligkeitAm?: Date | null;
+  skontoProzent?: number | null;
+  skontoBisAm?: Date | null;
   positionen: ParsedPosition[];
 };
 

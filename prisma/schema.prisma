@@ -112,6 +112,9 @@ model Rechnung {
   status       RechnungStatus @default(EINGEGANGEN)
   ampel        AmpelStatus?
   dublette     Boolean        @default(false)
+  faelligkeitAm DateTime?
+  skontoProzent Decimal?      @db.Decimal(5, 2)
+  skontoBisAm   DateTime?
   originalDatei String?       // Pfad in STORAGE_DIR
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
