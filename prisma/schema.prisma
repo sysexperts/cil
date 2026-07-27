@@ -104,6 +104,7 @@ model Rechnung {
   quelle       RechnungQuelle @default(PDF)
   status       RechnungStatus @default(EINGEGANGEN)
   ampel        AmpelStatus?
+  dublette     Boolean        @default(false)
   originalDatei String?       // Pfad in STORAGE_DIR
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt

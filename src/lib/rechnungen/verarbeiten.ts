@@ -62,6 +62,15 @@ export async function persistiere(
   const stamm = await ladeStammartikel();
   const ergebnis = prüfeRechnung(parsed, stamm);
 
+  // Dublettenprüfung: existiert bereits eine Rechnung mit gleicher Nummer?
+  let dublette = false;
+  if (parsed.nummer) {
+    const vorhanden = await prisma.rechnung.count({ where: { nummer: parsed.nummer } });
+    dublette = vorhanden > 0;
+  }
+  // Dublette ist mindestens eine Warnung (gelb), Fehler bleiben rot.
+  const ampelFinal = dublette && ergebnis.ampel === "GRUEN" ? "GELB" : ergebnis.ampel;
+
   const rechnung = await prisma.rechnung.create({
     data: {
       nummer: parsed.nummer ?? null,
@@ -71,7 +80,8 @@ export async function persistiere(
       bruttoSumme: parsed.bruttoSumme ?? null,
       quelle,
       status: "EINGEGANGEN",
-      ampel: ergebnis.ampel,
+      ampel: ampelFinal,
+      dublette,
       originalDatei,
       positionen: {
         create: parsed.positionen.map((p, i) => {
@@ -101,7 +111,8 @@ export async function persistiere(
       aktion: "RECHNUNG_EINGEGANGEN",
       details: {
         quelle,
-        ampel: ergebnis.ampel,
+        ampel: ampelFinal,
+        dublette,
         kopfAbweichungen: ergebnis.kopfAbweichungen as object,
         positionen: parsed.positionen.length,
       },
@@ -109,15 +120,16 @@ export async function persistiere(
   });
 
   // Benachrichtigung bei Abweichungen (nur wenn konfiguriert)
-  if (ergebnis.ampel !== "GRUEN") {
+  if (ampelFinal !== "GRUEN") {
     const k = await ladeMailKonfig();
-    if (k && (!k.nurBeiRot || ergebnis.ampel === "ROT")) {
+    if (k && (!k.nurBeiRot || ampelFinal === "ROT")) {
       const url = `${process.env.APP_URL ?? ""}/rechnungen/${rechnung.id}`;
       const fehler = ergebnis.positionen
         .flatMap((p) => p.abweichungen.filter((a) => a.schwere === "error" || a.schwere === "warn").map((a) => `Pos ${p.index + 1}: ${a.nachricht}`))
         .concat(ergebnis.kopfAbweichungen.filter((a) => a.schwere !== "info").map((a) => a.nachricht));
+      if (dublette) fehler.unshift(`Mögliche Dublette: Rechnungsnummer ${parsed.nummer} existiert bereits.`);
       await sendeBenachrichtigung(
-        `Rechnungsprüfung: ${ergebnis.ampel === "ROT" ? "Fehler" : "Abweichung"} in Rechnung ${parsed.nummer ?? "(ohne Nr.)"}`,
+        `Rechnungsprüfung: ${ampelFinal === "ROT" ? "Fehler" : "Abweichung"} in Rechnung ${parsed.nummer ?? "(ohne Nr.)"}`,
         `Bei der automatischen Prüfung wurde Folgendes festgestellt:\n\n${fehler.join("\n") || "Siehe Detailansicht."}\n\n${url}`,
       );
     }

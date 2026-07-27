@@ -52,7 +52,10 @@ export default async function RechnungenSeite() {
             )}
             {rechnungen.map((r) => (
               <tr key={r.id}>
-                <td><Link href={`/rechnungen/${r.id}`}><strong>{r.nummer ?? "(ohne Nr.)"}</strong></Link></td>
+                <td>
+                  <Link href={`/rechnungen/${r.id}`}><strong>{r.nummer ?? "(ohne Nr.)"}</strong></Link>
+                  {r.dublette && <div><span className="badge rot" style={{ fontSize: 10 }}>Dublette</span></div>}
+                </td>
                 <td>{r.datum ? new Date(r.datum).toLocaleDateString("de-DE") : "—"}</td>
                 <td><span className="badge neutral">{r.quelle}</span></td>
                 <td className="num">{r._count?.positionen ?? 0}</td>

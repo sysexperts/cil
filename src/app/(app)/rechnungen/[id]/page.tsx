@@ -34,6 +34,12 @@ export default async function RechnungDetail({ params }: { params: Promise<{ id:
         <Link href="/rechnungen" className="btn btn-sm">← Zurück</Link>
       </div>
 
+      {r.dublette && (
+        <div className="flash err" style={{ marginBottom: 16 }}>
+          ⚠ <strong>Mögliche Dublette:</strong> Eine Rechnung mit der Nummer <strong>{r.nummer}</strong> ist bereits im System vorhanden. Bitte vor Freigabe prüfen.
+        </div>
+      )}
+
       {/* Kopfdaten */}
       <div className="card card-pad" style={{ marginBottom: 16 }}>
         <div className="detail-grid">

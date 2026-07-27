@@ -1,13 +1,17 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { AmpelBadge, StatusBadge } from "@/components/Ampel";
+import { AmpelDonut, MonatsBalken } from "@/components/Charts";
 
 export const dynamic = "force-dynamic";
+
+const MONATE = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
 
 export default async function Dashboard() {
   let produkte = 0, rechnungen = 0, offen = 0;
   const ampel = { GRUEN: 0, GELB: 0, ROT: 0 };
   let letzte: any[] = [];
+  let alle: { createdAt: Date }[] = [];
   try {
     [produkte, rechnungen, offen] = await Promise.all([
       prisma.produkt.count(),
@@ -17,7 +21,22 @@ export default async function Dashboard() {
     const grp = await prisma.rechnung.groupBy({ by: ["ampel"], _count: true });
     for (const g of grp) if (g.ampel) (ampel as any)[g.ampel] = g._count;
     letzte = await prisma.rechnung.findMany({ orderBy: { createdAt: "desc" }, take: 6 });
+    alle = await prisma.rechnung.findMany({ select: { createdAt: true } });
   } catch {}
+
+  // Letzte 6 Monate als Balken
+  const jetzt = new Date();
+  const monate: { label: string; wert: number; key: string }[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(jetzt.getFullYear(), jetzt.getMonth() - i, 1);
+    monate.push({ label: MONATE[d.getMonth()], wert: 0, key: `${d.getFullYear()}-${d.getMonth()}` });
+  }
+  for (const r of alle) {
+    const d = new Date(r.createdAt);
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    const m = monate.find((x) => x.key === key);
+    if (m) m.wert++;
+  }
 
   return (
     <div>
@@ -29,10 +48,15 @@ export default async function Dashboard() {
         <div className="card card-pad stat"><div className="num">{offen}</div><div className="label">Offen / ungeprüft</div></div>
       </div>
 
-      <div className="grid grid-3" style={{ marginTop: 16 }}>
-        <div className="card card-pad stat"><div className="num" style={{ color: "var(--green)" }}>{ampel.GRUEN}</div><div className="label">✓ Ohne Beanstandung</div></div>
-        <div className="card card-pad stat"><div className="num" style={{ color: "#b5730e" }}>{ampel.GELB}</div><div className="label">Mit Abweichung (Toleranz)</div></div>
-        <div className="card card-pad stat"><div className="num" style={{ color: "var(--red)" }}>{ampel.ROT}</div><div className="label">Mit Fehler / Prüfung nötig</div></div>
+      <div className="grid grid-2" style={{ marginTop: 16 }}>
+        <div className="card card-pad">
+          <h3 style={{ marginBottom: 16 }}>Prüfergebnisse</h3>
+          <AmpelDonut gruen={ampel.GRUEN} gelb={ampel.GELB} rot={ampel.ROT} />
+        </div>
+        <div className="card card-pad">
+          <h3 style={{ marginBottom: 16 }}>Rechnungen pro Monat</h3>
+          <MonatsBalken daten={monate.map(({ label, wert }) => ({ label, wert }))} />
+        </div>
       </div>
 
       <div className="card card-pad" style={{ marginTop: 24 }}>
