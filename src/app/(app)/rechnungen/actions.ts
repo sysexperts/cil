@@ -22,8 +22,9 @@ export async function rechnungUpload(_prev: unknown, formData: FormData) {
   const name = file.name.toLowerCase();
   const istPdf = ERLAUBT.has(file.type || "") || name.endsWith(".pdf");
   const istXml = name.endsWith(".xml");
-  if (!istPdf && !istXml) {
-    return { ok: false, error: "Unterstützt werden PDF- und XML-Rechnungen (ZUGFeRD/XRechnung)." };
+  const istBild = /\.(jpg|jpeg|png|tif|tiff)$/.test(name) || (file.type || "").startsWith("image/");
+  if (!istPdf && !istXml && !istBild) {
+    return { ok: false, error: "Unterstützt werden PDF, Bild (Scan/Foto) und XML (ZUGFeRD/XRechnung)." };
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());

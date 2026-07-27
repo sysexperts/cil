@@ -15,6 +15,8 @@ RUN npx prisma generate && npm run build
 FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+# OCR (Tesseract) für gescannte Rechnungen / Fotos, inkl. deutscher Sprachdaten
+RUN apk add --no-cache tesseract-ocr tesseract-ocr-data-deu
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./

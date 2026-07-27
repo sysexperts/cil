@@ -3,6 +3,7 @@ import { speichereDatei } from "@/lib/storage";
 import { extrahiereText, extrahiereZugferdXml } from "@/lib/parsing/pdf";
 import { parseRechnungstext } from "@/lib/parsing/invoice";
 import { parseERechnungXml, istERechnungXml } from "@/lib/parsing/xml";
+import { ocrBild, istBild } from "@/lib/parsing/ocr";
 import { ladeStammartikel } from "./stammdaten";
 import { prüfeRechnung, type ParsedInvoice } from "@/lib/validation/engine";
 import { sendeBenachrichtigung, ladeMailKonfig } from "@/lib/notify";
@@ -18,6 +19,7 @@ export async function verarbeiteUpload(opts: {
 }): Promise<{ id: string }> {
   const { buffer, dateiname, userId } = opts;
   const istXml = dateiname.toLowerCase().endsWith(".xml");
+  const bild = istBild(dateiname);
 
   const relPfad = await speichereDatei(buffer, dateiname);
 
@@ -25,7 +27,12 @@ export async function verarbeiteUpload(opts: {
   let quelle: Quelle = opts.quelle ?? "PDF";
 
   try {
-    if (istXml) {
+    if (bild) {
+      // Gescannte Rechnung / Foto -> OCR, dann Textheuristik
+      const text = await ocrBild(buffer);
+      parsed = parseRechnungstext(text);
+      quelle = "OCR";
+    } else if (istXml) {
       // Reine E-Rechnung (XRechnung/CII)
       const xml = buffer.toString("utf-8");
       const e = parseERechnungXml(xml);
