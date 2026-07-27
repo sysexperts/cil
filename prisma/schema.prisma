@@ -8,12 +8,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// --- Benutzer (einfaches Team-Login) ---
+// --- Benutzer & Rollen ---
+enum Rolle {
+  ADMIN      // alles, inkl. Benutzerverwaltung & Einstellungen
+  FREIGEBER  // darf Rechnungen freigeben/ablehnen
+  PRUEFER    // darf hochladen/prüfen/kommentieren, aber nicht freigeben
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
   passwortHash String
   name         String?
+  rolle        Rolle    @default(PRUEFER)
   createdAt    DateTime @default(now())
   auditLogs    AuditLog[]
 }

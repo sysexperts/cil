@@ -3,8 +3,8 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { SESSION_COOKIE, MAX_AGE, verifySessionToken, type SessionPayload } from "@/lib/session";
 
-export { SESSION_COOKIE, createSessionToken, verifySessionToken } from "@/lib/session";
-export type { SessionPayload } from "@/lib/session";
+export { SESSION_COOKIE, createSessionToken, verifySessionToken, darfFreigeben, istAdmin } from "@/lib/session";
+export type { SessionPayload, Rolle } from "@/lib/session";
 
 /** In Server Components / Actions: aktuellen Benutzer aus dem Cookie lesen. */
 export async function getSessionUser(): Promise<SessionPayload | null> {
@@ -32,7 +32,7 @@ export async function verifyCredentials(email: string, passwort: string): Promis
   if (!user) return null;
   const ok = await bcrypt.compare(passwort, user.passwortHash);
   if (!ok) return null;
-  return { sub: user.id, email: user.email, name: user.name ?? undefined };
+  return { sub: user.id, email: user.email, name: user.name ?? undefined, rolle: user.rolle };
 }
 
 export function hashPassword(passwort: string): Promise<string> {

@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { AmpelBadge, StatusBadge } from "@/components/Ampel";
-import { setzeStatus, neuPruefen, rechnungLoeschen, kommentarHinzufuegen, kommentarLoeschen } from "../actions";
+import { setzeStatus, neuPruefen, rechnungLoeschen, kommentarHinzufuegen, kommentarLoeschen, freigabeAnfordern } from "../actions";
+import { getSessionUser, darfFreigeben } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,9 @@ export default async function RechnungDetail({ params }: { params: Promise<{ id:
     .catch(() => null);
 
   if (!r) notFound();
+
+  const user = await getSessionUser();
+  const kannFreigeben = darfFreigeben(user?.rolle);
 
   return (
     <div>
@@ -57,16 +61,25 @@ export default async function RechnungDetail({ params }: { params: Promise<{ id:
       {/* Workflow-Aktionen */}
       <div className="toolbar">
         <div style={{ display: "flex", gap: 8 }}>
-          <form action={setzeStatus}>
-            <input type="hidden" name="id" value={r.id} />
-            <input type="hidden" name="status" value="FREIGEGEBEN" />
-            <button className="btn btn-primary btn-sm" type="submit">✓ Freigeben</button>
-          </form>
-          <form action={setzeStatus}>
-            <input type="hidden" name="id" value={r.id} />
-            <input type="hidden" name="status" value="ABGELEHNT" />
-            <button className="btn btn-sm" type="submit">✕ Ablehnen</button>
-          </form>
+          {kannFreigeben ? (
+            <>
+              <form action={setzeStatus}>
+                <input type="hidden" name="id" value={r.id} />
+                <input type="hidden" name="status" value="FREIGEGEBEN" />
+                <button className="btn btn-primary btn-sm" type="submit">✓ Freigeben</button>
+              </form>
+              <form action={setzeStatus}>
+                <input type="hidden" name="id" value={r.id} />
+                <input type="hidden" name="status" value="ABGELEHNT" />
+                <button className="btn btn-sm" type="submit">✕ Ablehnen</button>
+              </form>
+            </>
+          ) : (
+            <form action={freigabeAnfordern}>
+              <input type="hidden" name="id" value={r.id} />
+              <button className="btn btn-primary btn-sm" type="submit">✉ Freigabe anfordern</button>
+            </form>
+          )}
           <form action={neuPruefen}>
             <input type="hidden" name="id" value={r.id} />
             <button className="btn btn-sm" type="submit">↻ Neu prüfen</button>

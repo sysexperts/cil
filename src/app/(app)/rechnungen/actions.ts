@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getSessionUser } from "@/lib/auth";
+import { getSessionUser, darfFreigeben } from "@/lib/auth";
 import { verarbeiteUpload } from "@/lib/rechnungen/verarbeiten";
 import { prüfeErneut } from "@/lib/rechnungen/verarbeiten";
 
@@ -44,11 +44,39 @@ export async function setzeStatus(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "");
   if (!id || !["FREIGEGEBEN", "ABGELEHNT", "GEPRUEFT"].includes(status)) return;
+  // Freigeben/Ablehnen nur für Admin/Freigeber
+  if ((status === "FREIGEGEBEN" || status === "ABGELEHNT") && !darfFreigeben(user?.rolle)) return;
 
   await prisma.rechnung.update({ where: { id }, data: { status: status as never } });
   await prisma.auditLog.create({
     data: { userId: user?.sub ?? null, rechnungId: id, aktion: `STATUS_${status}`, details: { status } },
   });
+  revalidatePath(`/rechnungen/${id}`);
+  revalidatePath("/rechnungen");
+}
+
+export async function freigabeAnfordern(formData: FormData) {
+  const user = await getSessionUser();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  const r = await prisma.rechnung.findUnique({ where: { id }, select: { nummer: true } });
+  await prisma.rechnung.update({ where: { id }, data: { status: "GEPRUEFT" } });
+  await prisma.auditLog.create({
+    data: { userId: user?.sub ?? null, rechnungId: id, aktion: "FREIGABE_ANGEFORDERT" },
+  });
+
+  // E-Mail an alle Freigeber/Admins
+  const freigeber = await prisma.user.findMany({ where: { rolle: { in: ["ADMIN", "FREIGEBER"] } }, select: { email: true } });
+  const empf = freigeber.map((f) => f.email).join(",");
+  if (empf) {
+    const { sendeAn } = await import("@/lib/notify");
+    const url = `${process.env.APP_URL ?? ""}/rechnungen/${id}`;
+    await sendeAn(
+      empf,
+      `Freigabe angefordert: Rechnung ${r?.nummer ?? "(ohne Nr.)"}`,
+      `${user?.name || user?.email || "Ein Prüfer"} bittet um Freigabe der Rechnung ${r?.nummer ?? ""}.\n\n${url}`,
+    );
+  }
   revalidatePath(`/rechnungen/${id}`);
   revalidatePath("/rechnungen");
 }

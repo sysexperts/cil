@@ -11,10 +11,11 @@ function secret(): Uint8Array {
   return new TextEncoder().encode(s);
 }
 
-export type SessionPayload = { sub: string; email: string; name?: string };
+export type Rolle = "ADMIN" | "FREIGEBER" | "PRUEFER";
+export type SessionPayload = { sub: string; email: string; name?: string; rolle: Rolle };
 
 export async function createSessionToken(p: SessionPayload): Promise<string> {
-  return new SignJWT({ email: p.email, name: p.name })
+  return new SignJWT({ email: p.email, name: p.name, rolle: p.rolle })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(p.sub)
     .setIssuedAt()
@@ -25,8 +26,20 @@ export async function createSessionToken(p: SessionPayload): Promise<string> {
 export async function verifySessionToken(token: string): Promise<SessionPayload | null> {
   try {
     const { payload } = await jwtVerify(token, secret());
-    return { sub: String(payload.sub), email: String(payload.email), name: payload.name as string | undefined };
+    return {
+      sub: String(payload.sub),
+      email: String(payload.email),
+      name: payload.name as string | undefined,
+      rolle: (payload.rolle as Rolle) ?? "PRUEFER",
+    };
   } catch {
     return null;
   }
+}
+
+export function darfFreigeben(rolle?: Rolle): boolean {
+  return rolle === "ADMIN" || rolle === "FREIGEBER";
+}
+export function istAdmin(rolle?: Rolle): boolean {
+  return rolle === "ADMIN";
 }

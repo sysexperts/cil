@@ -50,9 +50,19 @@ export function BenutzerFormular() {
             <input name="name" type="text" />
           </div>
         </div>
-        <div className="field">
-          <label>Passwort</label>
-          <input name="passwort" type="password" autoComplete="new-password" required minLength={8} />
+        <div className="form-row">
+          <div className="field">
+            <label>Passwort</label>
+            <input name="passwort" type="password" autoComplete="new-password" required minLength={8} />
+          </div>
+          <div className="field">
+            <label>Rolle</label>
+            <select name="rolle" defaultValue="PRUEFER">
+              <option value="PRUEFER">Prüfer (hochladen/prüfen)</option>
+              <option value="FREIGEBER">Freigeber (darf freigeben)</option>
+              <option value="ADMIN">Administrator (alles)</option>
+            </select>
+          </div>
         </div>
         <button className="btn btn-primary" type="submit" disabled={pending}>{pending ? "Anlegen…" : "Benutzer anlegen"}</button>
       </form>

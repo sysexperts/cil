@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { getSessionUser, hashPassword, verifyCredentials } from "@/lib/auth";
+import { getSessionUser, hashPassword, verifyCredentials, istAdmin } from "@/lib/auth";
+
+const ROLLEN = ["ADMIN", "FREIGEBER", "PRUEFER"] as const;
 
 export async function passwortAendern(_prev: unknown, formData: FormData) {
   const user = await getSessionUser();
@@ -26,21 +28,35 @@ export async function passwortAendern(_prev: unknown, formData: FormData) {
 export async function benutzerAnlegen(_prev: unknown, formData: FormData) {
   const user = await getSessionUser();
   if (!user) return { ok: false, error: "Nicht angemeldet." };
+  if (!istAdmin(user.rolle)) return { ok: false, error: "Nur Administratoren dürfen Benutzer anlegen." };
 
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const name = String(formData.get("name") ?? "").trim();
   const passwort = String(formData.get("passwort") ?? "");
+  const rolleEingabe = String(formData.get("rolle") ?? "PRUEFER");
+  const rolle = (ROLLEN as readonly string[]).includes(rolleEingabe) ? rolleEingabe : "PRUEFER";
 
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { ok: false, error: "Ungültige E-Mail." };
   if (passwort.length < 8) return { ok: false, error: "Passwort muss mind. 8 Zeichen haben." };
 
   try {
-    await prisma.user.create({ data: { email, name: name || null, passwortHash: await hashPassword(passwort) } });
+    await prisma.user.create({ data: { email, name: name || null, rolle: rolle as never, passwortHash: await hashPassword(passwort) } });
   } catch (e: any) {
     if (e?.code === "P2002") return { ok: false, error: "E-Mail existiert bereits." };
     return { ok: false, error: "Anlegen fehlgeschlagen." };
   }
-  await prisma.auditLog.create({ data: { userId: user.sub, aktion: "BENUTZER_ANGELEGT", details: { email } } });
+  await prisma.auditLog.create({ data: { userId: user.sub, aktion: "BENUTZER_ANGELEGT", details: { email, rolle } } });
   revalidatePath("/einstellungen");
   return { ok: true, error: "" };
+}
+
+export async function rolleAendern(formData: FormData) {
+  const user = await getSessionUser();
+  if (!user || !istAdmin(user.rolle)) return;
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const rolleEingabe = String(formData.get("rolle") ?? "");
+  if (!email || !(ROLLEN as readonly string[]).includes(rolleEingabe)) return;
+  await prisma.user.update({ where: { email }, data: { rolle: rolleEingabe as never } }).catch(() => {});
+  await prisma.auditLog.create({ data: { userId: user.sub, aktion: "ROLLE_GEAENDERT", details: { email, rolle: rolleEingabe } } });
+  revalidatePath("/einstellungen");
 }

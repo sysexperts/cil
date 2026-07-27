@@ -82,3 +82,16 @@ export async function sendeBenachrichtigung(betreff: string, text: string): Prom
 export async function benachrichtigungAktiv(): Promise<boolean> {
   return (await ladeMailKonfig()) != null;
 }
+
+/** Sendet an bestimmte Empfänger (z.B. Freigeber). No-Op ohne SMTP-Konfig. */
+export async function sendeAn(empfaenger: string, betreff: string, text: string): Promise<boolean> {
+  const k = await ladeMailKonfig();
+  if (!k || !empfaenger) return false;
+  try {
+    await sendeMitKonfig({ ...k, empfaenger }, betreff, text);
+    return true;
+  } catch (e) {
+    console.error("Freigabe-Mail fehlgeschlagen:", e);
+    return false;
+  }
+}
