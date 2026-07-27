@@ -72,6 +72,7 @@ export default async function RechnungDetail({ params }: { params: Promise<{ id:
           </form>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
+          <a className="btn btn-sm btn-primary" href={`/rechnungen/${r.id}/bericht`}>📑 Prüfbericht (PDF)</a>
           <a className="btn btn-sm" href={`/rechnungen/${r.id}/export`}>⬇ CSV</a>
           {r.originalDatei && (
             <a className="btn btn-sm" href={`/rechnungen/${r.id}/datei`} target="_blank" rel="noreferrer">📄 Original</a>
