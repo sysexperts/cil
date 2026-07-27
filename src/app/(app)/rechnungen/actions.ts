@@ -62,6 +62,24 @@ export async function neuPruefen(formData: FormData) {
   revalidatePath("/rechnungen");
 }
 
+export async function kommentarHinzufuegen(formData: FormData) {
+  const user = await getSessionUser();
+  const rechnungId = String(formData.get("rechnungId") ?? "");
+  const text = String(formData.get("text") ?? "").trim();
+  if (!rechnungId || !text) return;
+  await prisma.kommentar.create({
+    data: { rechnungId, text: text.slice(0, 2000), autor: user?.name || user?.email || null },
+  });
+  revalidatePath(`/rechnungen/${rechnungId}`);
+}
+
+export async function kommentarLoeschen(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  const rechnungId = String(formData.get("rechnungId") ?? "");
+  if (id) await prisma.kommentar.delete({ where: { id } }).catch(() => {});
+  if (rechnungId) revalidatePath(`/rechnungen/${rechnungId}`);
+}
+
 export async function rechnungLoeschen(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id) return;

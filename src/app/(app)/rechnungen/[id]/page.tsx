@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { AmpelBadge, StatusBadge } from "@/components/Ampel";
-import { setzeStatus, neuPruefen, rechnungLoeschen } from "../actions";
+import { setzeStatus, neuPruefen, rechnungLoeschen, kommentarHinzufuegen, kommentarLoeschen } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +21,7 @@ export default async function RechnungDetail({ params }: { params: Promise<{ id:
       include: {
         positionen: { orderBy: { position: "asc" }, include: { matchedProdukt: true } },
         auditLogs: { orderBy: { createdAt: "desc" } },
+        kommentare: { orderBy: { createdAt: "desc" } },
       },
     })
     .catch(() => null);
@@ -127,6 +128,36 @@ export default async function RechnungDetail({ params }: { params: Promise<{ id:
             })}
           </tbody>
         </table>
+      </div>
+
+      {/* Kommentare / Notizen */}
+      <div className="card card-pad" style={{ marginBottom: 16 }}>
+        <h3>Kommentare & Notizen</h3>
+        <form action={kommentarHinzufuegen} style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+          <input type="hidden" name="rechnungId" value={r.id} />
+          <input name="text" placeholder="Notiz oder Rückfrage hinzufügen…" required
+            style={{ flex: 1, padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 8 }} />
+          <button className="btn btn-primary btn-sm" type="submit">Hinzufügen</button>
+        </form>
+        {r.kommentare.length === 0 ? (
+          <p className="muted" style={{ fontSize: 13 }}>Noch keine Kommentare.</p>
+        ) : (
+          <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+            {r.kommentare.map((k) => (
+              <li key={k.id} style={{ padding: "8px 0", borderBottom: "1px solid var(--line)" }}>
+                <div style={{ fontSize: 14 }}>{k.text}</div>
+                <div className="muted" style={{ fontSize: 12, display: "flex", gap: 8, alignItems: "center" }}>
+                  {k.autor ?? "—"} · {new Date(k.createdAt).toLocaleString("de-DE")}
+                  <form action={kommentarLoeschen} style={{ display: "inline" }}>
+                    <input type="hidden" name="id" value={k.id} />
+                    <input type="hidden" name="rechnungId" value={r.id} />
+                    <button className="btn btn-sm" type="submit" style={{ padding: "2px 8px", fontSize: 11 }}>löschen</button>
+                  </form>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* Audit-Trail */}

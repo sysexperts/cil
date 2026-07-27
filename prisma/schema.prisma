@@ -111,8 +111,21 @@ model Rechnung {
 
   positionen   Rechnungsposition[]
   auditLogs    AuditLog[]
+  kommentare   Kommentar[]
 
   @@index([status])
+}
+
+// --- Kommentar / Notiz an einer Rechnung ---
+model Kommentar {
+  id         String   @id @default(cuid())
+  rechnung   Rechnung @relation(fields: [rechnungId], references: [id], onDelete: Cascade)
+  rechnungId String
+  autor      String?
+  text       String
+  createdAt  DateTime @default(now())
+
+  @@index([rechnungId])
 }
 
 // --- Rechnungsposition ---
