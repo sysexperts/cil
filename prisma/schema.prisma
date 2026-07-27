@@ -115,6 +115,7 @@ model Rechnung {
   faelligkeitAm DateTime?
   skontoProzent Decimal?      @db.Decimal(5, 2)
   skontoBisAm   DateTime?
+  lieferantName String?
   originalDatei String?       // Pfad in STORAGE_DIR
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt

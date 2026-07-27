@@ -38,12 +38,13 @@ export function parseRechnungstext(text: string): ParsedInvoice {
 
   const positionen = parsePositionen(text);
   const { faelligkeitAm, skontoProzent, skontoBisAm } = parseZahlung(text, datum);
+  const lieferantName = parseLieferant(text);
 
   return {
     nummer,
     datum,
     ustIdNr,
-    lieferantName: null,
+    lieferantName,
     nettoSumme: netto,
     mwstSumme: mwst,
     bruttoSumme: brutto,
@@ -52,6 +53,20 @@ export function parseRechnungstext(text: string): ParsedInvoice {
     skontoBisAm,
     positionen,
   };
+}
+
+// Lieferant (Rechnungssteller): erste sinnvolle Zeile, die nicht der Empfänger
+// (Ciloglu) oder eine Kopfzeile ist.
+function parseLieferant(text: string): string | null {
+  const zeilen = text.split(/\r?\n/).map((z) => z.trim()).filter(Boolean);
+  for (const z of zeilen.slice(0, 6)) {
+    if (/ciloglu/i.test(z)) continue;
+    if (/(rechnung|datum|ust-?idnr|vat|an:|pos\b|artikel|betrag|seite)/i.test(z)) continue;
+    if (z.length < 3 || z.length > 60) continue;
+    if (/^\d/.test(z)) continue;
+    return z.replace(/^An:\s*/i, "").trim();
+  }
+  return null;
 }
 
 function addTage(d: Date | null, tage: number): Date | null {

@@ -92,6 +92,7 @@ export async function persistiere(
       faelligkeitAm: parsed.faelligkeitAm ?? null,
       skontoProzent: parsed.skontoProzent ?? null,
       skontoBisAm: parsed.skontoBisAm ?? null,
+      lieferantName: parsed.lieferantName ?? null,
       originalDatei,
       positionen: {
         create: parsed.positionen.map((p, i) => {
