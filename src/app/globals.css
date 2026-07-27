@@ -1,8 +1,8 @@
 :root {
-  /* Ciloglu Design-Tokens (abgeleitet von ciloglu.de) */
-  --brand: #ec602a;
-  --brand-dark: #c94e1f;
-  --brand-soft: #fdeee7;
+  /* Ciloglu Design-Tokens — Markenrot aus dem Logo */
+  --brand: #d0202f;
+  --brand-dark: #a81826;
+  --brand-soft: #fbe7e9;
   --ink: #222222;
   --muted: #666666;
   --line: #e6e6e6;
@@ -44,16 +44,18 @@ a:hover { text-decoration: underline; }
   width: 240px; background: var(--bg); border-right: 1px solid var(--line);
   padding: 20px 16px; position: sticky; top: 0; height: 100vh;
 }
-.sidebar .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
-.sidebar .brand img { height: 34px; width: auto; }
-.sidebar .brand span { font-family: var(--font-head); font-weight: 700; font-size: 15px; }
+.sidebar .brand { display: flex; align-items: center; justify-content: center; margin-bottom: 28px; padding: 4px 0; }
+.sidebar .brand img { height: 48px; width: auto; }
 .nav a {
   display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius);
   color: var(--ink); font-weight: 500; margin-bottom: 4px;
 }
 .nav a:hover { background: var(--bg-soft); text-decoration: none; }
 .nav a.active { background: var(--brand-soft); color: var(--brand-dark); }
-.main { flex: 1; padding: 28px 32px; max-width: 1200px; }
+/* Sidebar-Icons einfarbig/dezent statt bunt */
+.nav a .nav-icon { filter: grayscale(1); opacity: 0.55; font-size: 15px; width: 18px; text-align: center; }
+.nav a.active .nav-icon { opacity: 0.8; }
+.main { flex: 1; padding: 28px 40px; width: 100%; }
 .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
 
 /* Cards */

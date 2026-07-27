@@ -17,15 +17,14 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="brand">
-        <Image src="/ciloglu-logo.png" alt="Ciloglu" width={70} height={34} priority />
-        <span>Rechnungsprüfer</span>
+        <Image src="/ciloglu-logo.png" alt="Ciloglu" width={100} height={48} priority />
       </div>
       <nav className="nav">
         {nav.map((n) => {
           const active = n.href === "/" ? path === "/" : path.startsWith(n.href);
           return (
             <Link key={n.href} href={n.href} className={active ? "active" : ""}>
-              <span aria-hidden>{n.icon}</span> {n.label}
+              <span className="nav-icon" aria-hidden>{n.icon}</span> {n.label}
             </Link>
           );
         })}
